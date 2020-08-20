@@ -30,9 +30,7 @@ void* dequeue(queue_t* q)
 
     void* ret = getFront(q->list);
 
-    //printf("tmp: %d\n", *((int*)ret));
     eraseHead(q->list);
-    //printf("tmp: %d\n", *((int*)ret));
     q->size--;
 
     return ret;

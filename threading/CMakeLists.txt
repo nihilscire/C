@@ -7,13 +7,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package( Threads REQUIRED )
 
-file(GLOB SOURCES "*.c")
+set(LIB_SOURCES queue.c list.c util.c)
+set(LIB_HEADERS queue.h list.h util.h)
 
-add_executable(consprod ${SOURCES})
+add_library(libqueue ${LIB_SOURCES} ${LIB_HEADERS})
 
-target_compile_options(consprod PUBLIC -Wall -Wextra -Wpedantic)
+add_executable(consprod_sem consprod_sem.c)
+add_executable(consprod_condvar consprod_condvar.c)
 
-target_link_libraries(consprod Threads::Threads)
+target_compile_options(consprod_sem PUBLIC -Wall -Wextra -Wpedantic)
+target_compile_options(consprod_condvar PUBLIC -Wall -Wextra -Wpedantic)
+
+target_link_libraries(consprod_sem Threads::Threads libqueue)
+target_link_libraries(consprod_condvar Threads::Threads libqueue)
 
 set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_VERBOSE_MAKEFILE on)

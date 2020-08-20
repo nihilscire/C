@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <semaphore.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -26,13 +25,12 @@ typedef struct thread thread_t;
 
 queue_t* production;
 
-int arr[MAX_PRODUCTION];
+int arr[5];
 int idx;
 
 pthread_mutex_t mutex;
-
-sem_t emptySem;
-sem_t fullSem;
+pthread_cond_t fullCond;
+pthread_cond_t emptyCond;
 
 void* consumer(void* arg)
 {
@@ -44,9 +42,14 @@ void* consumer(void* arg)
 
     while(1)
     {
-        sem_wait(&fullSem);
-
         pthread_mutex_lock(&mutex);
+
+        while(size(production) <=  0)
+        {
+            pthread_cond_wait(&fullCond, &mutex);
+        }
+
+        util_check(size(production) > 0, "lower bound exceeded");
 
         tmp = (int*)dequeue(production);
         //tmp = arr[idx--];
@@ -55,9 +58,9 @@ void* consumer(void* arg)
 
         fprintf(stdout, "I am thread consumer %d: %d\n", id, *tmp);
 
+        pthread_cond_broadcast(&emptyCond);
+        
         pthread_mutex_unlock(&mutex);
-
-        sem_post(&emptySem);
 
         free(tmp);
         sleep(rand() % 2 + 1);
@@ -78,9 +81,14 @@ void* producer(void* arg)
     {
         tmp = rand() % 100 + 1;
 
-        sem_wait(&emptySem);
-
         pthread_mutex_lock(&mutex);
+
+        while(size(production) == MAX_PRODUCTION)
+        {
+            pthread_cond_wait(&emptyCond, &mutex);
+        }
+
+        util_check(size(production) < MAX_PRODUCTION, "upper bound exceeded");
 
         fprintf(stdout, "I am thread producer %d: %d\n", id, tmp);
         
@@ -88,9 +96,9 @@ void* producer(void* arg)
         //arr[++idx] = tmp;
         //printf("producer %d, idx = %d, tmp = %d\n", id, idx, tmp);
 
-        pthread_mutex_unlock(&mutex);
+        pthread_cond_broadcast(&fullCond);
 
-        sem_post(&fullSem);
+        pthread_mutex_unlock(&mutex);
 
         sleep(rand() % 2 + 1); 
     }
@@ -108,11 +116,11 @@ int main()
     production = newQueue();
 
     idx = -1;
-    for(i = 0; i < MAX_PRODUCTION; ++i) arr[i] = -1;
+    for(i = 0; i < 5; ++i) arr[i] = -1;
 
     pthread_mutex_init(&mutex, NULL);
-    sem_init(&fullSem, 0, 0);
-    sem_init(&emptySem, 0, MAX_PRODUCTION);
+    pthread_cond_init(&fullCond, NULL);
+    pthread_cond_init(&emptyCond, NULL);
 
     thread_t* consThreads = (thread_t*) util_calloc(CONS, sizeof(thread_t));
     thread_t* prodThreads = (thread_t*) util_calloc(PROD, sizeof(thread_t));
@@ -159,8 +167,8 @@ int main()
     free(prodThreads);
 
     pthread_mutex_destroy(&mutex);
-    sem_destroy(&fullSem);
-    sem_destroy(&emptySem);
+    pthread_cond_destroy(&fullCond);
+    pthread_cond_destroy(&emptyCond);
 
     deleteQueue(&production);
 
