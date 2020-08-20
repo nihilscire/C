@@ -5,13 +5,14 @@
 static node_t* newNode(void*, size_t);
 static void deleteNode(node_t*);
 static void deleteRecur(node_t*);
-static list_iterator_t* newIterator(void);
+static list_iterator_t* newIterator(list_t*, node_t*);
 
 static node_t* newNode(void* data, size_t size)
 {
     node_t* n = (node_t*)util_calloc(1, sizeof(node_t));
 
     n->data = util_calloc(1, size);
+    n->size = size;
 
     memcpy(n->data, data, size);
 
@@ -33,9 +34,12 @@ static void deleteRecur(node_t* n)
     deleteNode(n);
 }
 
-static list_iterator_t* newIterator()
+static list_iterator_t* newIterator(list_t* l, node_t* node)
 {
     list_iterator_t* it = (list_iterator_t*) util_calloc(1, sizeof(list_iterator_t));
+
+    it->list = l;
+    it->curr = node;
 
     return it;
 }
@@ -100,7 +104,7 @@ void insertTail(list_t* l, void* data, size_t size)
 
 void eraseHead(list_t* l)
 {
-    if(empty(l)) return;
+    util_check(!empty(l), "the list is empty!");
 
     node_t* tmp = l->head;
     l->head = tmp->next;
@@ -114,7 +118,7 @@ void eraseHead(list_t* l)
 
 void eraseTail(list_t* l)
 {
-    if(empty(l)) return;    
+    util_check(!empty(l), "the list is empty!");  
 
     node_t* tmp = l->tail;
     l->tail = tmp->prev;
@@ -130,14 +134,26 @@ void* getFront(list_t* l)
 {
     util_check(!empty(l), "the list is empty!");
 
-    return l->head->data;
+    list_iterator_t* it = begin(l);
+
+    void* ret = derefIt(it);
+
+    deleteIt(it);
+
+    return ret;
 }
 
 void* getBack(list_t* l)
 {
     util_check(!empty(l), "the list is empty!");
 
-    return l->tail->data;
+    list_iterator_t* it = newIterator(l, l->tail);
+
+    void* ret = derefIt(it);
+
+    deleteIt(it);
+
+    return ret;
 }
 
 void print(list_t* l, FILE* fp, void (*printData)(void*, FILE*))
@@ -177,9 +193,9 @@ int length(list_t* l)
 
 list_iterator_t* begin(list_t* l)
 {
-    list_iterator_t* it = newIterator();
-    it->list = l;
-    it->curr = l->head;
+    util_check(l != NULL, "cannot dereference a NULL pointer");
+
+    list_iterator_t* it = newIterator(l, l->head);
 
     return it;
 }
@@ -198,16 +214,20 @@ int isValidIt(list_iterator_t* it)
 
 void nextIt(list_iterator_t* it)
 {
-    util_check(it->curr != NULL, "the iterator points to NULL!");
+    util_check(isValidIt(it), "the iterator points to NULL!");
 
     it->curr = it->curr->next;
 }
 
 void* derefIt(list_iterator_t* it)
 {
-    util_check(it->curr != NULL, "the iterator points to NULL!");
+    util_check(isValidIt(it), "the iterator points to NULL!");
 
-    void* ret = it->curr->data;
+    void* data = it->curr->data;
+    size_t size = it->curr->size;
+
+    void* ret = util_calloc(1, sizeof(size));
+    memcpy(ret, data, sizeof(size));
 
     return ret;
 }
