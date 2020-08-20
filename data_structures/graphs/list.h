@@ -5,6 +5,7 @@
 struct node
 {
     void* data;
+    size_t size;
     struct node* next;
     struct node* prev;
 };

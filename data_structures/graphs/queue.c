@@ -29,7 +29,10 @@ void* dequeue(queue_t* q)
     util_check(!empty(q->list), "the queue is empty");
 
     void* ret = getFront(q->list);
+
+    //printf("tmp: %d\n", *((int*)ret));
     eraseHead(q->list);
+    //printf("tmp: %d\n", *((int*)ret));
     q->size--;
 
     return ret;
